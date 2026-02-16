@@ -1,1 +1,452 @@
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>EcoRəng</title>
 
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+</head>
+
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <span>E</span><span>R</span>
+        </div>
+        <div class="brandText">
+          <div class="brandTitle">EcoRəng</div>
+          <div class="brandSub">Təmizlik aksiyaları • Video sübut • Hədiyyələr</div>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <div class="pill" id="netPill" title="Şəbəkə statusu">Online</div>
+        <div class="userbar" id="userbar"></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="side">
+        <div class="card sideCard">
+          <div class="sideTitle">Panel</div>
+
+          <nav class="tabs" role="tablist" aria-label="Bölmələr">
+            <button class="tab active" data-tab="events" type="button">
+              <span class="tabIcon">🗺️</span>
+              <span>Aksiyalar</span>
+            </button>
+            <button class="tab" data-tab="proof" type="button">
+              <span class="tabIcon">🎥</span>
+              <span>Video Sübut</span>
+            </button>
+            <button class="tab" data-tab="rewards" type="button">
+              <span class="tabIcon">🏆</span>
+              <span>Hədiyyə & Reyting</span>
+            </button>
+          </nav>
+
+          <div class="divider"></div>
+
+          <div class="miniGrid">
+            <div class="mini">
+              <div class="miniK">Yaş</div>
+              <div class="miniV">16–35</div>
+            </div>
+            <div class="mini">
+              <div class="miniK">Video</div>
+              <div class="miniV">max 3</div>
+            </div>
+            <div class="mini">
+              <div class="miniK">Limit</div>
+              <div class="miniV">20s/30MB</div>
+            </div>
+            <div class="mini">
+              <div class="miniK">Yaddaş</div>
+              <div class="miniV">IndexedDB</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <button class="ghost w100" id="btnSettings" type="button">Ayarlar</button>
+            <button class="ghost w100" id="btnModerator" type="button">Moderator</button>
+          </div>
+
+          <div class="hint mt10">
+            Moderator PIN (default): <b>1234</b>
+          </div>
+        </div>
+
+        <div class="card sideCard">
+          <div class="sideTitle">Qısa qaydalar</div>
+          <ul class="bullets">
+            <li>Əvvəl aksiyaya <b>qoşul</b></li>
+            <li>Sonra video sübut göndər</li>
+            <li>Xal yalnız <b>approve</b> ilə yazılır</li>
+            <li>Kuponlar “Redeem” ilə yaranır</li>
+          </ul>
+        </div>
+      </aside>
+
+      <section class="content">
+        <!-- EVENTS -->
+        <section class="panel show" id="panel-events">
+          <div class="card">
+            <div class="head">
+              <div>
+                <h2 class="h2">Aksiyalar</h2>
+                <div class="muted">Xəritə + list. Marker → popup → listdə aç.</div>
+              </div>
+
+              <div class="filters">
+                <div class="field">
+                  <label class="label" for="q">Axtarış</label>
+                  <input id="q" class="input" type="text" maxlength="60" placeholder="park / sahil / meşə..." />
+                </div>
+
+                <div class="field">
+                  <label class="label" for="city">Şəhər</label>
+                  <select id="city" class="select"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="split">
+              <div class="mapShell">
+                <div class="mapTop">
+                  <div class="pill" id="eventsMeta">0 aksiya</div>
+                  <button class="ghost" id="btnLocate" type="button">Mənim yerim</button>
+                </div>
+                <div id="map" class="map" aria-label="Xəritə"></div>
+                <div class="hint mt10">
+                  Tile-lar üçün internet lazımdır. Offline olsan list işləyəcək.
+                </div>
+              </div>
+
+              <div class="listShell">
+                <div class="rowBetween">
+                  <div class="pill">Siyahı</div>
+                  <div class="muted tiny">Join → Proof → Approve</div>
+                </div>
+                <div class="list mt12" id="eventsList"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROOF -->
+        <section class="panel" id="panel-proof">
+          <div class="card">
+            <div class="head">
+              <div>
+                <h2 class="h2">Video Sübut</h2>
+                <div class="muted">Aksiya seç → max 3 video → göndər (IndexedDB).</div>
+              </div>
+              <div class="pill" id="proofPill">Hazır</div>
+            </div>
+
+            <div class="formGrid">
+              <div class="field">
+                <label class="label" for="proofEvent">Aksiya</label>
+                <select id="proofEvent" class="select"></select>
+                <div class="hint" id="proofHint"></div>
+              </div>
+
+              <div class="field">
+                <label class="label" for="note">Qısa qeyd</label>
+                <textarea id="note" class="textarea" rows="3" maxlength="220"
+                  placeholder="Məs: Sahildə plastik topladıq, 3 nəfər idik."></textarea>
+                <div class="hint">Maks 220 simvol.</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="rowBetween">
+              <div>
+                <div class="h3">Videolar</div>
+                <div class="muted tiny">Hər video: max 20s / 30MB</div>
+              </div>
+              <div class="pill subtle" id="slotCount">0/3</div>
+            </div>
+
+            <div class="slots mt12" id="slots"></div>
+
+            <div class="row mt14">
+              <button class="primary" id="btnSubmit" type="button">Göndər</button>
+              <button class="ghost" id="btnReset" type="button">Təmizlə</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="rowBetween">
+              <div class="h3">Mənim göndərişlərim</div>
+              <div class="muted tiny" id="mySubCount">0</div>
+            </div>
+
+            <div class="tableWrap mt12">
+              <table class="table" aria-label="Göndərişlər">
+                <thead>
+                  <tr>
+                    <th>Tarix</th>
+                    <th>Aksiya</th>
+                    <th>Status</th>
+                    <th>Video</th>
+                    <th>Bax</th>
+                  </tr>
+                </thead>
+                <tbody id="mySubs"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- REWARDS -->
+        <section class="panel" id="panel-rewards">
+          <div class="card">
+            <div class="head">
+              <div>
+                <h2 class="h2">Hədiyyə & Reyting</h2>
+                <div class="muted">Balans → leaderboard → redeem → kupon.</div>
+              </div>
+
+              <div class="balance">
+                <div class="muted tiny">Balans</div>
+                <div class="score" id="balance">0</div>
+                <div class="badgeLine" id="badgeLine">—</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="rowBetween">
+              <div class="h3">Leaderboard</div>
+              <div class="muted tiny">Top 10</div>
+            </div>
+
+            <div class="tableWrap mt12">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Ad</th>
+                    <th>Şəhər</th>
+                    <th>Xal</th>
+                    <th>Badge</th>
+                  </tr>
+                </thead>
+                <tbody id="board"></tbody>
+              </table>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="rowBetween">
+              <div class="h3">Hədiyyələr</div>
+              <div class="muted tiny">Redeem</div>
+            </div>
+
+            <div class="rewards mt12" id="rewardsGrid"></div>
+
+            <div class="divider"></div>
+
+            <div class="rowBetween">
+              <div class="h3">Kuponlarım</div>
+              <div class="muted tiny" id="couponCount">0</div>
+            </div>
+
+            <div class="tableWrap mt12">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Tarix</th>
+                    <th>Hədiyyə</th>
+                    <th>Kod</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="coupons"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <!-- AUTH -->
+  <dialog class="modal" id="authModal">
+    <form class="modalCard" method="dialog">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle">Giriş / Qeydiyyat</div>
+          <div class="muted tiny">Demo (lokal)</div>
+        </div>
+        <button type="button" class="iconBtn" id="closeAuth">✕</button>
+      </div>
+
+      <div class="grid2 mt12">
+        <div class="field">
+          <label class="label" for="name">Ad</label>
+          <input id="name" class="input" type="text" maxlength="40" placeholder="Məs: Elvin" />
+        </div>
+        <div class="field">
+          <label class="label" for="age">Yaş (16–35)</label>
+          <input id="age" class="input" type="number" min="16" max="35" placeholder="16" />
+        </div>
+      </div>
+
+      <div class="grid2 mt12">
+        <div class="field">
+          <label class="label" for="cityAuth">Şəhər</label>
+          <input id="cityAuth" class="input" type="text" maxlength="30" placeholder="Bakı" />
+        </div>
+        <div class="field">
+          <label class="label" for="login">Telefon/Email</label>
+          <input id="login" class="input" type="text" maxlength="80" placeholder="+994... / mail@..." />
+        </div>
+      </div>
+
+      <div class="field mt12">
+        <label class="label" for="pass">Şifrə</label>
+        <input id="pass" class="input" type="password" minlength="4" maxlength="40" placeholder="****" />
+      </div>
+
+      <div class="row mt14">
+        <button type="button" class="primary w100" id="btnRegister">Qeydiyyat</button>
+        <button type="button" class="ghost w100" id="btnLogin">Giriş</button>
+      </div>
+
+      <div class="hint mt10" id="authHint"></div>
+    </form>
+  </dialog>
+
+  <!-- SETTINGS -->
+  <dialog class="modal" id="settingsModal">
+    <form class="modalCard" method="dialog">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle">Ayarlar</div>
+          <div class="muted tiny">Moderator PIN + Data</div>
+        </div>
+        <button type="button" class="iconBtn" id="closeSettings">✕</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label class="label" for="oldPin">Köhnə PIN</label>
+        <input id="oldPin" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="1234" />
+      </div>
+
+      <div class="field mt12">
+        <label class="label" for="newPin">Yeni PIN (4–8 rəqəm)</label>
+        <input id="newPin" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="7788" />
+      </div>
+
+      <div class="row mt14">
+        <button type="button" class="primary w100" id="savePin">PIN yadda saxla</button>
+        <button type="button" class="ghost w100" id="wipeAll">Bütün datanı sıfırla</button>
+      </div>
+
+      <div class="hint mt10" id="settingsHint"></div>
+    </form>
+  </dialog>
+
+  <!-- MOD PIN -->
+  <dialog class="modal" id="pinModal">
+    <form class="modalCard" method="dialog">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle">Moderator Girişi</div>
+          <div class="muted tiny">PIN tələb olunur</div>
+        </div>
+        <button type="button" class="iconBtn" id="closePin">✕</button>
+      </div>
+
+      <div class="field mt12">
+        <label class="label" for="pin">PIN</label>
+        <input id="pin" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="1234" />
+      </div>
+
+      <div class="row mt14">
+        <button type="button" class="primary w100" id="pinEnter">Daxil ol</button>
+        <button type="button" class="ghost w100" id="pinCancel">İmtina</button>
+      </div>
+
+      <div class="hint mt10" id="pinHint"></div>
+    </form>
+  </dialog>
+
+  <!-- MODERATOR -->
+  <dialog class="modal" id="modModal">
+    <div class="modalCard wide">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle">Moderator Paneli</div>
+          <div class="muted tiny">Pending → Approve/Reject</div>
+        </div>
+        <button type="button" class="iconBtn" id="closeMod">✕</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tarix</th>
+              <th>İstifadəçi</th>
+              <th>Aksiya</th>
+              <th>Video</th>
+              <th>Status</th>
+              <th>Əməl</th>
+            </tr>
+          </thead>
+          <tbody id="modRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- VIEW -->
+  <dialog class="modal" id="viewModal">
+    <div class="modalCard wide">
+      <div class="modalHead">
+        <div>
+          <div class="modalTitle">Göndəriş Videoları</div>
+          <div class="muted tiny" id="viewMeta">—</div>
+        </div>
+        <button type="button" class="iconBtn" id="closeView">✕</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="videoGrid" id="viewGrid"></div>
+      <div class="hint mt10">Videolar IndexedDB-də saxlanır.</div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
